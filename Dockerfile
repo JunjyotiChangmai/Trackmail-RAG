@@ -1,27 +1,26 @@
 # 1. First stage: Get uv binary from the official image
 FROM ghcr.io/astral-sh/uv:latest AS uv_bin
 
-# 2. Second stage: Build dependencies inside a standard python-slim image
-FROM python:3.12-slim AS builder
+# 2. Second stage: Build dependencies
+FROM python:3.13-slim AS builder
 
 WORKDIR /app
 
 # Copy the uv executables from the first stage
 COPY --from=uv_bin /uv /uvx /bin/
 
-# Enable bytecode compilation and extend network timeouts for heavy downloads
+# Enable bytecode compilation
 ENV UV_COMPILE_BYTECODE=1
-ENV UV_HTTP_TIMEOUT=300
 
 # Copy dependency files
 COPY pyproject.toml uv.lock ./
 
-# CRITICAL FIX: Use BuildKit caching so successfully downloaded wheels are NEVER lost between failed retries
+# CRITICAL FIX: Cache mount for wheels
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-install-project
 
-# 3. Final execution stage
-FROM python:3.12-slim
+# 3. Final execution stage (UPDATED TO 3.13)
+FROM python:3.13-slim
 
 WORKDIR /app
 
